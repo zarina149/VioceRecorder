@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Voice Recorder</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        text-align: center;
+        margin: 0;
+        padding: 1em;
+      }
+      button {
+        margin: 1em;
+        padding: 1em;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Voice Recorder</h2>
+    <button id="recordBtn">Start Recording</button>
+    <button id="stopBtn" disabled>Stop</button>
+    <audio id="player" controls></audio>
+
+    <script>
+      let mediaRecorder;
+      let audioChunks = [];
+
+      const recordBtn = document.getElementById("recordBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const player = document.getElementById("player");
+
+      recordBtn.onclick = async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = (e) => {
+          audioChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          player.src = audioUrl;
+
+          // Send audioBlob to backend
+          const formData = new FormData();
+          formData.append('audio', audioBlob, 'recording.webm');
+
+          fetch('https://your-make-or-backend-endpoint.com', {
+            method: 'POST',
+            body: formData
+          }).then(res => console.log('Uploaded')).catch(err => console.error(err));
+
+          audioChunks = [];
+        };
+
+        mediaRecorder.start();
+        recordBtn.disabled = true;
+        stopBtn.disabled = false;
+      };
+
+      stopBtn.onclick = () => {
+        mediaRecorder.stop();
+        recordBtn.disabled = false;
+        stopBtn.disabled = true;
+      };
+    </script>
+  </body>
+</html>
